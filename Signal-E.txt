@@ -1,0 +1,15 @@
+The core idea is to build an Event-Driven Signal Engine.
+Instead of a basic "app," you are building a high-speed filter that sits between a "firehose" of raw data and the final user. This architecture is the "holy grail" for both LinkedIn (processing social feeds) and Morgan Stanley (processing market trades).
+The Workflow (The "Why it matters")
+The Firehose (Producer): A Java service simulates 10,000+ events per second (e.g., Stock price changes or LinkedIn post views).
+The Brain (Kafka Streams): This is your masterpiece. It looks at the stream and detects patterns in real-time.
+Morgan Stanley angle: "Tell me if this stock price dropped 2% in under 60 seconds."
+LinkedIn angle: "Tell me if this post just got 100 likes in the last 5 minutes (it’s trending)."
+The Action (Consumer): A Java service that takes that "signal" and sends a notification or triggers an automated trade/alert.
+Why this wins for both companies:
+For Morgan Stanley: It shows you can handle financial volatility and building "low-latency" systems where every millisecond counts.
+For LinkedIn: It shows you understand Social Graph dynamics—how to process massive user activity without breaking the database.
+The "Secret Sauce" for your Resume:
+By building your BullMQ clone in Go as a separate project, you can tell recruiters:
+"I built the infrastructure (Go Task Queue) to understand how job scheduling works at the OS level, and then I built the platform (Java/Kafka Engine) to show how I solve high-scale business problems."
+Does the "Signal Engine" concept feel like something you could start coding this week?
