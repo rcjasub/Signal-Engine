@@ -15,6 +15,10 @@ public class StockProducer {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     public static void main(String[] args) throws Exception {
+        // run with: java -jar producer.jar --crash AAPL
+        String crashTicker = parseCrashTicker(args);
+        boolean crashFired = false;
+
         Properties props = new Properties();
         props.put("bootstrap.servers", "localhost:9092");
         props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
@@ -22,18 +26,32 @@ public class StockProducer {
         props.put("linger.ms", "5");
         props.put("batch.size", "65536");
 
-        // starting prices for each ticker
         double[] prices = {150.0, 140.0, 300.0, 185.0};
         Random random = new Random();
         long count = 0;
+        long startTime = System.currentTimeMillis();
+
+        if (crashTicker != null) {
+            System.out.println("[CRASH MODE] Will force " + crashTicker + " down 3% after 2s warmup");
+        }
 
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
             System.out.println("Producer started — sending events to '" + TOPIC + "'...");
 
             while (true) {
                 for (int i = 0; i < TICKERS.length; i++) {
-                    // drift price randomly up or down by up to 0.5% per tick
-                    prices[i] *= (1 + (random.nextDouble() - 0.5) * 0.005);
+                    boolean isCrashTarget = crashTicker != null
+                        && !crashFired
+                        && TICKERS[i].equals(crashTicker)
+                        && System.currentTimeMillis() - startTime > 2000;
+
+                    if (isCrashTarget) {
+                        prices[i] *= 0.97; // force a 3% drop — guaranteed to trigger the signal
+                        crashFired = true;
+                        System.out.printf("[CRASH] Forced %s down 3%% → $%.2f%n", crashTicker, prices[i]);
+                    } else {
+                        prices[i] *= (1 + (random.nextDouble() - 0.5) * 0.005);
+                    }
 
                     Map<String, Object> event = Map.of(
                         "ticker", TICKERS[i],
@@ -50,5 +68,14 @@ public class StockProducer {
                 }
             }
         }
+    }
+
+    private static String parseCrashTicker(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--crash")) {
+                return (i + 1 < args.length) ? args[i + 1].toUpperCase() : "AAPL";
+            }
+        }
+        return null;
     }
 }
