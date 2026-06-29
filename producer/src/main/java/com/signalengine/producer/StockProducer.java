@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 
@@ -53,10 +52,10 @@ public class StockProducer {
                         prices[i] *= (1 + (random.nextDouble() - 0.5) * 0.005);
                     }
 
-                    Map<String, Object> event = Map.of(
-                        "ticker", TICKERS[i],
-                        "price", Math.round(prices[i] * 100.0) / 100.0,
-                        "timestamp", System.currentTimeMillis()
+                    StockEvent event = new StockEvent(
+                        TICKERS[i],
+                        Math.round(prices[i] * 100.0) / 100.0,
+                        System.currentTimeMillis()
                     );
 
                     producer.send(new ProducerRecord<>(TOPIC, TICKERS[i], mapper.writeValueAsString(event)));

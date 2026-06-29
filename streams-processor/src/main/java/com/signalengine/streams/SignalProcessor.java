@@ -74,7 +74,7 @@ public class SignalProcessor {
 
     private static String extractPrice(String json) {
         try {
-            return String.valueOf(mapper.readTree(json).get("price").asDouble());
+            return String.valueOf(mapper.readValue(json, StockEvent.class).getPrice());
         } catch (Exception e) {
             return null;
         }
