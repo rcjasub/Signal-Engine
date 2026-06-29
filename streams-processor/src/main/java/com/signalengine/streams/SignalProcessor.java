@@ -1,6 +1,8 @@
 package com.signalengine.streams;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
@@ -13,7 +15,17 @@ import java.util.Properties;
 
 public class SignalProcessor {
 
+    private static final String DEAD_LETTER_TOPIC = "dead-letter";
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static final KafkaProducer<String, String> deadLetterProducer = createDeadLetterProducer();
+
+    private static KafkaProducer<String, String> createDeadLetterProducer() {
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "localhost:9092");
+        props.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        props.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
+        return new KafkaProducer<>(props);
+    }
 
     public static void main(String[] args) {
         Properties props = new Properties();
@@ -27,7 +39,7 @@ public class SignalProcessor {
         builder.stream("stock-prices", Consumed.with(Serdes.String(), Serdes.String()))
             // pull just the price out of the JSON
             .mapValues(SignalProcessor::extractPrice)
-            .filter((ticker, price) -> price != null)
+            .filter((ticker, price) -> price != null && Double.parseDouble(price) > 0)
             // group by ticker key, then look at a 60-second window
             .groupByKey()
             .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(60)))
@@ -66,7 +78,10 @@ public class SignalProcessor {
             .to("price-signals", Produced.with(Serdes.String(), Serdes.String()));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
-        Runtime.getRuntime().addShutdownHook(new Thread(streams::close));
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            streams.close();
+            deadLetterProducer.close();
+        }));
         streams.start();
 
         System.out.println("Signal processor running — watching for 2% drops in 60s windows...");
@@ -76,6 +91,7 @@ public class SignalProcessor {
         try {
             return String.valueOf(mapper.readValue(json, StockEvent.class).getPrice());
         } catch (Exception e) {
+            deadLetterProducer.send(new ProducerRecord<>(DEAD_LETTER_TOPIC, json));
             return null;
         }
     }
