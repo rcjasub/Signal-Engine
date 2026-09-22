@@ -28,11 +28,18 @@ public class SignalProcessor {
     }
 
     public static void main(String[] args) {
+        // run multiple local instances with: java -jar streams-processor.jar --state-dir /tmp/instance-a
+        String stateDir = parseStateDir(args);
+
         Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "signal-processor");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 4);
+        if (stateDir != null) {
+            props.put(StreamsConfig.STATE_DIR_CONFIG, stateDir);
+        }
 
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -85,6 +92,15 @@ public class SignalProcessor {
         streams.start();
 
         System.out.println("Signal processor running — watching for 2% drops in 60s windows...");
+    }
+
+    private static String parseStateDir(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--state-dir")) {
+                return (i + 1 < args.length) ? args[i + 1] : null;
+            }
+        }
+        return null;
     }
 
     private static String extractPrice(String json) {
