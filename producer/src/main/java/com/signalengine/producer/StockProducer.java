@@ -15,7 +15,9 @@ public class StockProducer {
 
     public static void main(String[] args) throws Exception {
         // run with: java -jar producer.jar --crash AAPL
+        // or load-test with: java -jar producer.jar --duration 600
         String crashTicker = parseCrashTicker(args);
+        long durationSeconds = parseDuration(args);
         boolean crashFired = false;
 
         Properties props = new Properties();
@@ -29,15 +31,19 @@ public class StockProducer {
         Random random = new Random();
         long count = 0;
         long startTime = System.currentTimeMillis();
+        long endTime = durationSeconds > 0 ? startTime + (durationSeconds * 1000) : Long.MAX_VALUE;
 
         if (crashTicker != null) {
             System.out.println("[CRASH MODE] Will force " + crashTicker + " down 3% after 2s warmup");
+        }
+        if (durationSeconds > 0) {
+            System.out.println("[LOAD TEST] Running for " + durationSeconds + "s, then reporting throughput");
         }
 
         try (KafkaProducer<String, String> producer = new KafkaProducer<>(props)) {
             System.out.println("Producer started — sending events to '" + TOPIC + "'...");
 
-            while (true) {
+            while (System.currentTimeMillis() < endTime) {
                 for (int i = 0; i < TICKERS.length; i++) {
                     boolean isCrashTarget = crashTicker != null
                         && !crashFired
@@ -66,6 +72,14 @@ public class StockProducer {
                     System.out.printf("Sent %,d events%n", count);
                 }
             }
+
+            if (durationSeconds > 0) {
+                double elapsedSeconds = (System.currentTimeMillis() - startTime) / 1000.0;
+                System.out.printf(
+                    "%n[LOAD TEST COMPLETE] Sent %,d events in %.1fs -> %.0f events/sec%n",
+                    count, elapsedSeconds, count / elapsedSeconds
+                );
+            }
         }
     }
 
@@ -76,5 +90,14 @@ public class StockProducer {
             }
         }
         return null;
+    }
+
+    private static long parseDuration(String[] args) {
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equals("--duration")) {
+                return (i + 1 < args.length) ? Long.parseLong(args[i + 1]) : 0;
+            }
+        }
+        return 0;
     }
 }
