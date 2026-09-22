@@ -1,15 +1,17 @@
-The core idea is to build an Event-Driven Signal Engine.
-Instead of a basic "app," you are building a high-speed filter that sits between a "firehose" of raw data and the final user. This architecture is the "holy grail" for both LinkedIn (processing social feeds) and Morgan Stanley (processing market trades).
-The Workflow (The "Why it matters")
-The Firehose (Producer): A Java service simulates 10,000+ events per second (e.g., Stock price changes or LinkedIn post views).
-The Brain (Kafka Streams): This is your masterpiece. It looks at the stream and detects patterns in real-time.
-Morgan Stanley angle: "Tell me if this stock price dropped 2% in under 60 seconds."
-LinkedIn angle: "Tell me if this post just got 100 likes in the last 5 minutes (it’s trending)."
-The Action (Consumer): A Java service that takes that "signal" and sends a notification or triggers an automated trade/alert.
-Why this wins for both companies:
-For Morgan Stanley: It shows you can handle financial volatility and building "low-latency" systems where every millisecond counts.
-For LinkedIn: It shows you understand Social Graph dynamics—how to process massive user activity without breaking the database.
-The "Secret Sauce" for your Resume:
-By building your BullMQ clone in Go as a separate project, you can tell recruiters:
-"I built the infrastructure (Go Task Queue) to understand how job scheduling works at the OS level, and then I built the platform (Java/Kafka Engine) to show how I solve high-scale business problems."
-Does the "Signal Engine" concept feel like something you could start coding this week?
+Here's the real list, in order of how likely an interviewer is to catch it:
+
+1. "10,000+ events per second" is a target, not a result. Every bullet uses "designing the pipeline to ingest and process" — that's future-tense engineering, not "I measured X and got Y." If someone asks "how did you benchmark that, what hardware, what was your p99 latency at that throughput," you don't have an answer yet. This is the single most exposed number on your whole resume.
+
+2. The "ongoing work on partitioning strategy and consumer group rebalancing" line is a confession, not a flex. Partitioning and rebalancing are two of the actual hard problems in distributed stream processing. Saying they're "ongoing" tells a knowledgeable reader you haven't solved the part of the project that makes it distributed-systems-hard yet. Someone at SingleStore or Datadog will zero in on exactly this line.
+
+3. No mention of out-of-order events, late data, or delivery semantics. Real stream processing has to answer: what happens when an event arrives late? Do you guarantee at-least-once or exactly-once processing? None of that is addressed. If you get asked "how do you handle a duplicate message from a Kafka retry," there's currently no answer built into the project.
+
+4. "Sliding window algorithms" is vague enough to be a red flag on its own. What window size? Tumbling or sliding? What are you actually aggregating, and why that structure over alternatives? A generic phrase here reads as "I know the term" more than "I made a real design decision and can defend it."
+
+5. No named data source. Ingesting from where — real external data, or a synthetic generator you wrote yourself? If it's self-generated test data, that's a much weaker claim than handling real, messy, adversarial input, and right now the resume doesn't specify either way, which usually means it's the weaker version.
+
+6. No failure-injection story. "Fault tolerance" is claimed, but there's no bullet like "killed a broker mid-run and confirmed consumer group rebalanced without data loss." Claiming fault tolerance without demonstrating you tested it is the gap between saying it and proving it.
+
+7. No observability. How do you know it's actually working at scale? No metrics, no dashboard, no logging strategy mentioned. "I built something distributed" and "I can tell you how it's behaving in production" are different skills, and only the first one shows up here.
+
+8. It's solo, unreviewed work. Every architectural decision — partitioning strategy, window choice, scalability approach — is self-graded. No mentor, no code review, no second opinion that it's actually sound versus just "seemed reasonable."
